@@ -89,6 +89,9 @@ public class GermanEformsProvider : ITenderProvider
     {
         try
         {
+            // Store the raw XML string
+            string rawXmlString = xmlDoc.ToString();
+            
             // Handle both with and without namespace prefix
             var root = xmlDoc.Root;
             if (root == null) return null;
@@ -182,7 +185,8 @@ public class GermanEformsProvider : ITenderProvider
                 LotId = lotId,
                 ProcedureType = procedureType,
                 EstimatedValue = null, // Not easily extractable from XML, would need complex parsing
-                BuyerPortalUrl = portalUrl
+                BuyerPortalUrl = portalUrl,
+                RawXml = rawXmlString  // Store the raw XML
             };
         }
         catch (Exception ex)

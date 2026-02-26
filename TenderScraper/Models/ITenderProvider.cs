@@ -32,4 +32,9 @@ public class RawTender
     /// URL to the buyer's portal where tender documents can be accessed
     /// </summary>
     public string? BuyerPortalUrl { get; set; }
+    
+    /// <summary>
+    /// Original XML content (if available from EFORMS provider)
+    /// </summary>
+    public string? RawXml { get; set; }
 }
