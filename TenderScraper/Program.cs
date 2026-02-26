@@ -218,20 +218,55 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
                     var dbTender = new Tender
                     {
                         SourceId = $"{tender.OCID}-{tender.LotId}",
+                        LotId = tender.LotId,
+                        NoticeType = tender.NoticeType,
+
+                        // Title & description (German original; English filled by AI if run)
                         TitleDe = tender.Title,
                         TitleEn = analysis?.Metadata.Title,
-                        BuyerName = "Unknown", // Extract from provider data if available
+                        DescriptionDe = tender.Description,
+                        DescriptionEn = analysis != null ? string.Join(" ", analysis.Metadata.Summary) : null,
+
+                        // Buyer
+                        BuyerName = tender.BuyerName,
+                        BuyerWebsite = tender.BuyerWebsite,
+                        BuyerContactEmail = tender.BuyerContactEmail,
+                        BuyerContactPhone = tender.BuyerContactPhone,
+                        BuyerCity = tender.BuyerCity,
+                        BuyerCountry = tender.BuyerCountry,
+
+                        // Classification
+                        CpvCode = tender.CpvCode,
+                        AdditionalCpvCodes = tender.AdditionalCpvCodes,
+                        NutsCode = tender.NutsCode,
+                        ContractNature = tender.ContractNature,
+                        ProcedureType = tender.ProcedureType,
+
+                        // Financials
                         ValueEuro = tender.EstimatedValue,
-                        Deadline = null, // Extract from provider data if available
-                        SuitabilityScore = analysis?.DecisionSupport.AccessibilityScore != null 
-                            ? (decimal?)analysis.DecisionSupport.AccessibilityScore 
+
+                        // Dates
+                        PublicationDate = tender.PublicationDate == default ? null : tender.PublicationDate,
+                        SubmissionDeadline = tender.SubmissionDeadline,
+                        Deadline = tender.SubmissionDeadline, // backwards-compat alias
+                        ContractStartDate = tender.ContractStartDate,
+                        ContractEndDate = tender.ContractEndDate,
+
+                        // Portal
+                        BuyerPortalUrl = tender.BuyerPortalUrl,
+
+                        // AI outputs
+                        SuitabilityScore = analysis?.DecisionSupport.AccessibilityScore != null
+                            ? (decimal?)analysis.DecisionSupport.AccessibilityScore
                             : null,
-                        RawXml = tender.RawXml, // Store the raw XML from EFORMS
                         EnglishExecutiveSummary = analysis != null ? string.Join(" ", analysis.Metadata.Summary) : null,
                         FatalFlaws = analysis != null ? string.Join("; ", analysis.RedFlags.FatalFlaws) : null,
                         HardCertifications = analysis != null ? string.Join("; ", analysis.Technical.Certifications) : null,
                         TechStack = analysis != null ? string.Join(", ", analysis.Technical.TechStack) : null,
-                        EligibilityProbability = null, // Could be calculated from analysis
+                        EligibilityProbability = null,
+
+                        // Raw data
+                        RawXml = tender.RawXml,
                         CreatedAt = DateTime.UtcNow
                     };
                     

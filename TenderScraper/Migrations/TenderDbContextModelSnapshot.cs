@@ -30,9 +30,54 @@ namespace TenderScraper.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TenderID"));
 
-                    b.Property<string>("BuyerName")
+                    b.Property<string>("AdditionalCpvCodes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BuyerCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("BuyerContactEmail")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("BuyerContactPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("BuyerCountry")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("BuyerName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("BuyerNameEn")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("BuyerPortalUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("BuyerWebsite")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ContractEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContractNature")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ContractStartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CpvCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -40,8 +85,14 @@ namespace TenderScraper.Migrations
                     b.Property<DateTime?>("Deadline")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DescriptionDe")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
+                        .HasColumnType("text");
+
                     b.Property<decimal?>("EligibilityProbability")
-                        .HasColumnType("decimal(3, 2)");
+                        .HasColumnType("numeric(3,2)");
 
                     b.Property<string>("EnglishExecutiveSummary")
                         .HasColumnType("text");
@@ -52,6 +103,25 @@ namespace TenderScraper.Migrations
                     b.Property<string>("HardCertifications")
                         .HasColumnType("text");
 
+                    b.Property<string>("LotId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("NoticeType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("NutsCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ProcedureType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("PublicationDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("RawXml")
                         .HasColumnType("text");
 
@@ -60,8 +130,11 @@ namespace TenderScraper.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<DateTime?>("SubmissionDeadline")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<decimal?>("SuitabilityScore")
-                        .HasColumnType("decimal(3, 1)");
+                        .HasColumnType("numeric(3,1)");
 
                     b.Property<string>("TechStack")
                         .HasColumnType("text");
@@ -73,7 +146,7 @@ namespace TenderScraper.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal?>("ValueEuro")
-                        .HasColumnType("decimal(18, 2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("TenderID");
 
