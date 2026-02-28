@@ -9,6 +9,9 @@ using Microsoft.Extensions.Configuration;
 // Program.cs - CLI Mode Support
 var builder = Host.CreateApplicationBuilder(args);
 
+// Ensure user secrets are loaded in all environments (not just Development)
+builder.Configuration.AddUserSecrets<Program>();
+
 // 1. Register Configurations
 builder.Services.Configure<TenderFilterOptions>(
     builder.Configuration.GetSection("TenderFilter"));
@@ -45,6 +48,7 @@ builder.Services.AddSingleton<TenderFilterService>();
 builder.Services.AddScoped<DeepAnalysisService>();
 builder.Services.AddScoped<IngestionOrchestrator>();
 builder.Services.AddScoped<TenderDocumentDownloader>();
+builder.Services.AddScoped<WeeklyBriefService>();
 
 var host = builder.Build();
 
@@ -85,6 +89,10 @@ if (args.Length > 0 && args[0] == "ingest")
 {
     // CLI Mode: Run ingestion once and exit
     await RunCliIngestionAsync(host, args);
+}
+else if (args.Length > 0 && args[0] == "brief")
+{
+    await RunWeeklyBriefAsync(host, args);
 }
 else
 {
@@ -346,3 +354,120 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
     Console.WriteLine();
     Console.WriteLine("✓ Ingestion complete!");
 }
+
+static async Task RunWeeklyBriefAsync(IHost host, string[] args)
+{
+    // ── Argument parsing ─────────────────────────────────────────────────
+    // --sector=IT        (default: IT)
+    // --cpv=72           (default: 72 = IT services)
+    // --top=10           (default: 10)
+    // --output=brief.pdf (default: TenderBrief_<date>.pdf in current dir)
+    // --week=2026-02-24  (start of week, default: last Monday)
+
+    var sectorArg  = args.FirstOrDefault(a => a.StartsWith("--sector="))?.Split('=')[1] ?? "IT Services";
+    var cpvArg     = args.FirstOrDefault(a => a.StartsWith("--cpv="))?.Split('=')[1]    ?? "72";
+    var topArg     = args.FirstOrDefault(a => a.StartsWith("--top="))?.Split('=')[1]    ?? "10";
+    var outputArg  = args.FirstOrDefault(a => a.StartsWith("--output="))?.Split('=')[1];
+    var weekArg    = args.FirstOrDefault(a => a.StartsWith("--week="))?.Split('=')[1];
+
+    int topN = int.TryParse(topArg, out var t) ? t : 10;
+
+    // Default week: last Monday → Sunday
+    var today     = DateOnly.FromDateTime(DateTime.Today);
+    var dayOfWeek = (int)today.DayOfWeek;
+    var lastMonday = today.AddDays(-(dayOfWeek == 0 ? 6 : dayOfWeek - 1));
+    if (weekArg != null && DateOnly.TryParse(weekArg, out var parsedWeek))
+        lastMonday = parsedWeek;
+    var weekEnd = lastMonday.AddDays(6);
+
+    var outputPath = outputArg
+        ?? Path.Combine(Directory.GetCurrentDirectory(),
+            $"TenderBrief_{sectorArg.Replace(" ", "_")}_{lastMonday:yyyy-MM-dd}.pdf");
+
+    Console.WriteLine("╔════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║     TenderEngine - Weekly Intelligence Brief          ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════╝");
+    Console.WriteLine();
+    Console.WriteLine($"Sector:     {sectorArg} (CPV {cpvArg}*)");
+    Console.WriteLine($"Week:       {lastMonday:dd MMM yyyy} – {weekEnd:dd MMM yyyy}");
+    Console.WriteLine($"Top:        {topN} tenders");
+    Console.WriteLine($"Output:     {outputPath}");
+    Console.WriteLine();
+
+    using var scope = host.Services.CreateScope();
+    var dbContext    = scope.ServiceProvider.GetRequiredService<TenderDbContext>();
+    var briefService = scope.ServiceProvider.GetRequiredService<WeeklyBriefService>();
+
+    // ── Query tenders from DB ────────────────────────────────────────────
+    Console.WriteLine("🔍 Querying database...");
+
+    var weekStartDt = lastMonday.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+    var weekEndDt   = weekEnd.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+
+    var tenders = await dbContext.Tenders
+        .Where(t =>
+            t.CpvCode != null && t.CpvCode.StartsWith(cpvArg) &&
+            t.PublicationDate >= weekStartDt &&
+            t.PublicationDate <= weekEndDt)
+        .OrderByDescending(t => t.SuitabilityScore ?? 0)
+        .ThenByDescending(t => t.ValueEuro ?? 0)
+        .Take(topN)
+        .ToListAsync();
+
+    if (!tenders.Any())
+    {
+        // Widen search to last 30 days if the week has no data yet
+        Console.WriteLine($"⚠️  No tenders found for that week. Widening to last 30 days...");
+        var cutoff = DateTime.UtcNow.AddDays(-30);
+        tenders = await dbContext.Tenders
+            .Where(t => t.CpvCode != null && t.CpvCode.StartsWith(cpvArg) && t.PublicationDate >= cutoff)
+            .OrderByDescending(t => t.SuitabilityScore ?? 0)
+            .ThenByDescending(t => t.ValueEuro ?? 0)
+            .Take(topN)
+            .ToListAsync();
+
+        if (!tenders.Any())
+        {
+            Console.WriteLine("❌ No tenders found for this sector. Run 'ingest' first to populate data.");
+            return;
+        }
+
+        // Adjust week label to reflect actual data range
+        var minDate = tenders.Min(t => t.PublicationDate ?? DateTime.UtcNow);
+        var maxDate = tenders.Max(t => t.PublicationDate ?? DateTime.UtcNow);
+        lastMonday = DateOnly.FromDateTime(minDate);
+        weekEnd    = DateOnly.FromDateTime(maxDate);
+        Console.WriteLine($"   Found {tenders.Count} tenders ({lastMonday:dd MMM} – {weekEnd:dd MMM yyyy})");
+    }
+    else
+    {
+        Console.WriteLine($"   ✓ Found {tenders.Count} tenders in database");
+    }
+
+    // ── Generate PDF ─────────────────────────────────────────────────────
+    Console.WriteLine("📄 Generating PDF...");
+    try
+    {
+        briefService.GenerateBrief(tenders, sectorArg, lastMonday, weekEnd, outputPath);
+        Console.WriteLine();
+        Console.WriteLine($"✅ Brief generated: {outputPath}");
+        Console.WriteLine();
+
+        // Print a quick text summary to console too
+        Console.WriteLine("TENDERS INCLUDED:");
+        int i = 1;
+        foreach (var tender in tenders)
+        {
+            var score = tender.SuitabilityScore.HasValue ? $"  Score: {tender.SuitabilityScore}/10" : "";
+            var value = tender.ValueEuro.HasValue ? $"  Value: €{tender.ValueEuro.Value:N0}" : "";
+            Console.WriteLine($"  [{i++}] {tender.TitleEn ?? tender.TitleDe}{score}{value}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Failed to generate PDF: {ex.Message}");
+        if (ex.InnerException != null)
+            Console.WriteLine($"   {ex.InnerException.Message}");
+    }
+}
+
