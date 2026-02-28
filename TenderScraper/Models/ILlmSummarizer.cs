@@ -15,5 +15,11 @@ public interface ILlmSummarizer
 //    Task<RedFlagReport> GenerateRedFlagReportAsync(string rawGermanText);
 
     Task<UnifiedTenderAnalysis> AnalyzeTenderAsync(string userPrompt);
+
+    /// <summary>
+    /// Sends a plain prompt and returns the raw text response.
+    /// Used for simple tasks like translating an organisation name.
+    /// </summary>
+    Task<string> TranslateAsync(string prompt);
 }
 

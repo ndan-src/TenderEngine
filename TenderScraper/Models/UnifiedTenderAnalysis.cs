@@ -63,6 +63,7 @@ public class ProjectMetadata
 {
     public string Title { get; set; } = string.Empty;
     public List<string> Summary { get; set; } = new();
+    public string BuyerNameEn { get; set; } = string.Empty;
 }
 
 public class RedFlagReport

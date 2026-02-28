@@ -18,22 +18,23 @@ When summarizing German standards, always provide the UK/International equivalen
 
             ### FIELD-SPECIFIC INSTRUCTIONS
             1. Metadata.Title: Professional English translation. 
-            2. Metadata.Summary: 3 bullets. Map German acronyms to UK/Global equivalents (e.g., ""IT-Grundschutz"" -> ""BSI baseline security, similar to NIST/ISO"").
-            3. RedFlags.FatalFlaws: List dealbreakers. Look for ""Deutsche Steuer-ID"", ""Sicherheitsüberprüfung (Ü2/Ü3)"", or ""Ausschließliche Vertragssprache Deutsch"".
-            4. RedFlags.ReciprocityRisk: Based on the UK's non-EU status in 2026, evaluate if this tender is protected by GPA or strictly ""EU-only"".
-            5. Technical.TechStack: Include METHODOLOGIES (ISO 27001, IT-Grundschutz), COMPLIANCE (NIS2, BSI C5), and SOFTWARE (GRC Tools, ServiceNow, etc.).
-            6. DecisionSupport.AccessibilityScore: A numeric value 1-10. 
+            2. Metadata.BuyerNameEn: Translate the buyer/contracting authority name to English. Preserve acronyms (GmbH, AG, e.V.) as-is. If already in English, return unchanged. Use [BUYER_NAME] as the source.
+            3. Metadata.Summary: 3 bullets. Map German acronyms to UK/Global equivalents (e.g., ""IT-Grundschutz"" -> ""BSI baseline security, similar to NIST/ISO"").
+            4. RedFlags.FatalFlaws: List dealbreakers. Look for ""Deutsche Steuer-ID"", ""Sicherheitsüberprüfung (Ü2/Ü3)"", or ""Ausschließliche Vertragssprache Deutsch"".
+            5. RedFlags.ReciprocityRisk: Based on the UK's non-EU status in 2026, evaluate if this tender is protected by GPA or strictly ""EU-only"".
+            6. Technical.TechStack: Include METHODOLOGIES (ISO 27001, IT-Grundschutz), COMPLIANCE (NIS2, BSI C5), and SOFTWARE (GRC Tools, ServiceNow, etc.).
+            7. DecisionSupport.AccessibilityScore: A numeric value 1-10. 
                - Deduct 4 points if ""Bidding Language: German"" is mandatory.
                - Deduct 2 points if ""On-site presence"" is required.
                - Never return 0.
-            7. DecisionSupport.StrategicAdvice: High-value recommendation. Should they:
+            8. DecisionSupport.StrategicAdvice: High-value recommendation. Should they:
                - ""Bid solo"" (Rare for UK)
                - ""Find a German partner"" (Common for ISMS)
                - ""Walk away"" (If reciprocity/language risk is too high)
 
             ### JSON SCHEMA
             {
-              ""Metadata"": { ""Title"": """", ""Summary"": [] },
+              ""Metadata"": { ""Title"": """", ""BuyerNameEn"": """", ""Summary"": [] },
               ""RedFlags"": {
                 ""FatalFlaws"": [],
                 ""ReciprocityRisk"": """",
@@ -49,13 +50,15 @@ When summarizing German standards, always provide the UK/International equivalen
               }
             }
 
+            BUYER NAME: [BUYER_NAME]
             GERMAN DESCRIPTION:
             [DESCRIPTION]";
     
-    public static string GetGermanTenderAnalyst(string procedureType, string description)
+    public static string GetGermanTenderAnalyst(string procedureType, string description, string? buyerName = null)
     {
         return GermanTenderAnalyst
             .Replace("[PROCEDURE_TYPE]", procedureType)
+            .Replace("[BUYER_NAME]", buyerName ?? "Unknown")
             .Replace("[DESCRIPTION]", description);
     }
 }

@@ -185,11 +185,30 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
             
             if (!noAi)
             {
-                //await injest.ProcessHighValueTender(tender);
                 if (tender.ProcedureType != null)
                 {
-                    analysis = await translate.GetSmartSummaryAsync(tender.ProcedureType, tender.Description);
+                    // Pass buyer name so the main analysis translates it in one shot
+                    analysis = await translate.GetSmartSummaryAsync(tender.ProcedureType, tender.Description, tender.BuyerName);
                     analysis.PrintAnalysis();
+                }
+            }
+
+            // BuyerNameEn: from AI analysis if available, otherwise a separate cheap translation call
+            string? buyerNameEn = null;
+            if (!string.IsNullOrEmpty(analysis?.Metadata.BuyerNameEn))
+            {
+                buyerNameEn = analysis.Metadata.BuyerNameEn;
+            }
+            else
+            {
+                try
+                {
+                    buyerNameEn = await translate.TranslateBuyerNameAsync(tender.BuyerName);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"    ⚠️  Could not translate buyer name: {ex.Message}");
+                    buyerNameEn = tender.BuyerName;
                 }
             }
 
@@ -214,8 +233,7 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
                     .FirstOrDefaultAsync(t => t.SourceId == $"{tender.OCID}-{tender.LotId}");
                 
                 if (existingTender == null)
-                {
-                    var dbTender = new Tender
+                {                    var dbTender = new Tender
                     {
                         SourceId = $"{tender.OCID}-{tender.LotId}",
                         LotId = tender.LotId,
@@ -229,6 +247,7 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
 
                         // Buyer
                         BuyerName = tender.BuyerName,
+                        BuyerNameEn = buyerNameEn,
                         BuyerWebsite = tender.BuyerWebsite,
                         BuyerContactEmail = tender.BuyerContactEmail,
                         BuyerContactPhone = tender.BuyerContactPhone,
@@ -276,7 +295,17 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
                 }
                 else
                 {
-                    Console.WriteLine($"    ℹ️  Already in database (ID: {existingTender.TenderID})");
+                    // Backfill BuyerNameEn if it was missing on a previous run
+                    if (string.IsNullOrEmpty(existingTender.BuyerNameEn) && !string.IsNullOrEmpty(buyerNameEn))
+                    {
+                        existingTender.BuyerNameEn = buyerNameEn;
+                        await dbContext.SaveChangesAsync();
+                        Console.WriteLine($"    ℹ️  Updated BuyerNameEn (ID: {existingTender.TenderID})");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"    ℹ️  Already in database (ID: {existingTender.TenderID})");
+                    }
                 }
             }
             catch (Exception ex)

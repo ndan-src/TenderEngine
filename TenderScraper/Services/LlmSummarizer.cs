@@ -127,6 +127,34 @@ ANALYSIS:";
 
         return analysis ?? throw new Exception("Failed to map AI response to UnifiedTenderAnalysis.");
     }
+
+    public async Task<string> TranslateAsync(string prompt)
+    {
+        var requestBody = new
+        {
+            model = _model,
+            messages = new[]
+            {
+                new { role = "user", content = prompt }
+            },
+            temperature = 0.1,
+            max_tokens = 100
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("chat/completions", requestBody);
+        response.EnsureSuccessStatusCode();
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(responseBody);
+
+        return doc.RootElement
+            .GetProperty("choices")[0]
+            .GetProperty("message")
+            .GetProperty("content")
+            .GetString()
+            ?.Trim() ?? prompt;
+    }
+
     private async Task<string> CallOpenAiAsync(string prompt)
     {
         var requestBody = new
