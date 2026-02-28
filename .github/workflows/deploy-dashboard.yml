@@ -44,6 +44,9 @@ jobs:
       - name: Copy index.html to 404.html (for Angular routing)
         run: cp tender-dashboard/dist/tender-dashboard/browser/index.html tender-dashboard/dist/tender-dashboard/browser/404.html
 
+      - name: Add .nojekyll file (disable Jekyll)
+        run: touch tender-dashboard/dist/tender-dashboard/browser/.nojekyll
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
