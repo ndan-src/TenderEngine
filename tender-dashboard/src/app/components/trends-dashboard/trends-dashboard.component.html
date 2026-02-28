@@ -1,0 +1,141 @@
+﻿<div class="trends-container">
+
+  <!-- Header + controls -->
+  <div class="trends-header">
+    <div class="title-block">
+      <h1>📊 Tender Trends</h1>
+      <p class="subtitle">Spending patterns, active regions, and repeat buyers</p>
+    </div>
+
+    <div class="controls">
+      <mat-button-toggle-group [(ngModel)]="preset" (change)="onPresetChange()">
+        <mat-button-toggle value="week">Last 7 days</mat-button-toggle>
+        <mat-button-toggle value="month">Last month</mat-button-toggle>
+        <mat-button-toggle value="quarter">Last quarter</mat-button-toggle>
+        <mat-button-toggle value="custom">Custom</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <mat-button-toggle-group [(ngModel)]="groupBy" *ngIf="preset !== 'week'" (change)="load()">
+        <mat-button-toggle value="week">By week</mat-button-toggle>
+        <mat-button-toggle value="month">By month</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+  </div>
+
+  <!-- Custom date range -->
+  <div class="custom-range" *ngIf="preset === 'custom'">
+    <mat-form-field appearance="outline">
+      <mat-label>From</mat-label>
+      <input matInput type="date" [(ngModel)]="customFrom" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>To</mat-label>
+      <input matInput type="date" [(ngModel)]="customTo" />
+    </mat-form-field>
+    <button mat-flat-button color="primary" (click)="applyCustomRange()">
+      <mat-icon>refresh</mat-icon> Apply
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="spinner-wrap" *ngIf="loading">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+
+  <div class="charts-grid" *ngIf="!loading">
+
+    <!-- Spend over time (full width) -->
+    <mat-card class="chart-card full-width">
+      <mat-card-header>
+        <mat-card-title>📈 Total Spend Over Time</mat-card-title>
+        <mat-card-subtitle>Combined estimated contract value per {{ groupBy }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrap tall" *ngIf="spendOverTimeData && spendOverTimeData.labels?.length; else noData">
+          <canvas baseChart
+            [data]="spendOverTimeData"
+            [options]="timelineOptions"
+            type="line">
+          </canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Sector spend -->
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>🏗️ Sectors Increasing Spend</mat-card-title>
+        <mat-card-subtitle>Total value by CPV division (top 10)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrap" *ngIf="sectorSpendData && sectorSpendData.labels?.length; else noData">
+          <canvas baseChart
+            [data]="sectorSpendData"
+            [options]="barOptions"
+            type="bar">
+          </canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Region activity -->
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>🗺️ Most Active Regions</mat-card-title>
+        <mat-card-subtitle>Tender count by NUTS code / city (top 10)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrap" *ngIf="regionData && regionData.labels?.length; else noData">
+          <canvas baseChart
+            [data]="regionData"
+            [options]="barOptions"
+            type="bar">
+          </canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Avg value by category -->
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>💶 Average Contract Value by Category</mat-card-title>
+        <mat-card-subtitle>Mean estimated value per CPV division (top 10)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrap" *ngIf="avgValueData && avgValueData.labels?.length; else noData">
+          <canvas baseChart
+            [data]="avgValueData"
+            [options]="barOptions"
+            type="bar">
+          </canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Repeat buyers -->
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>🔁 Repeat Contracting Authorities</mat-card-title>
+        <mat-card-subtitle>Buyers with more than one tender in this period (top 10)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrap" *ngIf="repeatBuyersData && repeatBuyersData.labels?.length; else noData">
+          <canvas baseChart
+            [data]="repeatBuyersData"
+            [options]="barOptions"
+            type="bar">
+          </canvas>
+        </div>
+        <ng-template #noData>
+          <p class="no-data">No repeat buyers found in this period.</p>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+
+  </div>
+</div>
+
+<ng-template #noData>
+  <p class="no-data">No data available for this period.</p>
+</ng-template>
+
