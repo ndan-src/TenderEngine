@@ -42,10 +42,16 @@ export class SupabaseService {
     sortColumn: keyof Tender = 'PublicationDate',
     sortAsc = false
   ): Promise<PagedResult<Tender>> {
+    const dateColumns: Array<keyof Tender> = ['PublicationDate', 'SubmissionDeadline', 'ContractStartDate', 'ContractEndDate', 'Deadline', 'CreatedAt'];
+    const isDateColumn = dateColumns.includes(sortColumn);
+
     let query = this.client
       .from('Tenders')
       .select('*', { count: 'exact' })
-      .order(sortColumn as string, { ascending: sortAsc })
+      .order(sortColumn as string, {
+        ascending: sortAsc,
+        nullsFirst: isDateColumn ? false : true  // nulls last for dates so they don't pollute the top
+      })
       .range(page * pageSize, (page + 1) * pageSize - 1);
 
     if (filter.search) {

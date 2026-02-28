@@ -1,10 +1,10 @@
-﻿import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatSortModule, Sort } from '@angular/material/sort';
+import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
@@ -27,7 +27,9 @@ import { Tender } from '../../models/tender.model';
   templateUrl: './tender-list.component.html',
   styleUrls: ['./tender-list.component.scss']
 })
-export class TenderListComponent implements OnInit {
+export class TenderListComponent implements OnInit, AfterViewInit {
+  @ViewChild(MatSort) sort!: MatSort;
+
   tenders: Tender[] = [];
   totalCount = 0;
   loading = false;
@@ -51,6 +53,12 @@ export class TenderListComponent implements OnInit {
 
   ngOnInit() {
     this.load();
+  }
+
+  ngAfterViewInit() {
+    // Sorting is handled entirely server-side via Supabase .order().
+    // [matSortActive] and [matSortDirection] in the template reflect state visually.
+    // No client-side comparator needed.
   }
 
   async load() {

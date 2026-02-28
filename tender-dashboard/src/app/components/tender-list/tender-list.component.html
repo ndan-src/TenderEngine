@@ -38,7 +38,12 @@
 
   <!-- Table -->
   <div class="table-wrap" *ngIf="!loading">
-    <table mat-table [dataSource]="tenders" matSort (matSortChange)="onSortChange($event)" class="tender-table">
+    <table mat-table [dataSource]="tenders" matSort
+           [matSortActive]="sortColumn"
+           [matSortDirection]="sortAsc ? 'asc' : 'desc'"
+           matSortDisableClear
+           (matSortChange)="onSortChange($event)"
+           class="tender-table">
 
       <!-- Title -->
       <ng-container matColumnDef="TitleEn">
