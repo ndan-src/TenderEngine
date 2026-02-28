@@ -1,0 +1,32 @@
+﻿name: Scheduled Tender Scrape
+
+on:
+  schedule:
+    # Runs at 03:00 UTC every day
+    - cron: '0 3 * * *'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run scraper
+        run: dotnet run --configuration Release --project ./TenderScraper/TenderScraper.csproj -- ingest
+        env:
+          # .NET maps __ to : in config keys, overriding appsettings.json
+          ConnectionStrings__Postgres: ${{ secrets.SUPABASE_CONN }}
+          OpenAI__ApiKey: ${{ secrets.OPENAI_APIKEY }}
