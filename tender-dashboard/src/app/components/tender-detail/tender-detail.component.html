@@ -1,0 +1,162 @@
+﻿<div class="detail-container" *ngIf="!loading && tender">
+
+  <!-- Back button + header -->
+  <div class="detail-header">
+    <button mat-stroked-button routerLink="/tenders">
+      <mat-icon>arrow_back</mat-icon> Back to list
+    </button>
+    <div class="header-main">
+      <h1>{{ tender.TitleEn || tender.TitleDe || 'Untitled' }}</h1>
+      <span *ngIf="tender.TitleEn && tender.TitleDe" class="original-title">
+        🇩🇪 {{ tender.TitleDe }}
+      </span>
+    </div>
+    <a *ngIf="tender.BuyerPortalUrl" mat-flat-button color="accent"
+       [href]="tender.BuyerPortalUrl" target="_blank" rel="noopener">
+      <mat-icon>open_in_new</mat-icon> Open Tender Portal
+    </a>
+  </div>
+
+  <div class="detail-grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <!-- AI Summary -->
+      <mat-card *ngIf="tender.EnglishExecutiveSummary" class="ai-card">
+        <mat-card-header>
+          <mat-card-title>🤖 AI Summary</mat-card-title>
+          <span class="spacer"></span>
+          <span *ngIf="tender.SuitabilityScore != null"
+                class="score-badge" [ngClass]="scoreClass(tender.SuitabilityScore)">
+            Score: {{ tender.SuitabilityScore }}/10
+          </span>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ tender.EnglishExecutiveSummary }}</p>
+
+          <div *ngIf="tender.FatalFlaws" class="red-flag">
+            <mat-icon>warning</mat-icon>
+            <div>
+              <strong>Fatal Flaws</strong>
+              <p>{{ tender.FatalFlaws }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="tender.HardCertifications" class="info-block">
+            <strong>Hard Certifications Required</strong>
+            <p>{{ tender.HardCertifications }}</p>
+          </div>
+
+          <div *ngIf="tender.TechStack" class="info-block">
+            <strong>Tech Stack Mentioned</strong>
+            <p>{{ tender.TechStack }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Description side-by-side -->
+      <mat-card class="desc-card">
+        <mat-card-header>
+          <mat-card-title>📄 Description</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="bilingual">
+            <div class="lang-col">
+              <h4>🇬🇧 English</h4>
+              <p>{{ tender.DescriptionEn || '—' }}</p>
+            </div>
+            <mat-divider vertical></mat-divider>
+            <div class="lang-col">
+              <h4>🇩🇪 German (original)</h4>
+              <p>{{ tender.DescriptionDe || '—' }}</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Raw XML (collapsed) -->
+      <mat-expansion-panel *ngIf="tender.RawXml" class="raw-xml-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Raw XML</mat-panel-title>
+        </mat-expansion-panel-header>
+        <pre class="raw-xml">{{ tender.RawXml }}</pre>
+      </mat-expansion-panel>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-col">
+
+      <!-- Key facts -->
+      <mat-card>
+        <mat-card-header><mat-card-title>📋 Key Facts</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <dl class="fact-list">
+            <dt>Notice Type</dt><dd>{{ tender.NoticeType || '—' }}</dd>
+            <dt>CPV Code</dt><dd><code *ngIf="tender.CpvCode">{{ tender.CpvCode }}</code><span *ngIf="!tender.CpvCode">—</span></dd>
+            <dt>Additional CPVs</dt><dd>{{ tender.AdditionalCpvCodes || '—' }}</dd>
+            <dt>NUTS Code</dt><dd>{{ tender.NutsCode || '—' }}</dd>
+            <dt>Contract Nature</dt><dd>{{ tender.ContractNature || '—' }}</dd>
+            <dt>Procedure Type</dt><dd>{{ tender.ProcedureType || '—' }}</dd>
+            <dt>Estimated Value</dt><dd>{{ formatValue(tender.ValueEuro) }}</dd>
+            <dt>Eligibility %</dt>
+            <dd>{{ tender.EligibilityProbability != null ? (tender.EligibilityProbability * 100 | number:'1.0-0') + '%' : '—' }}</dd>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Buyer -->
+      <mat-card>
+        <mat-card-header><mat-card-title>🏛️ Buyer</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <dl class="fact-list">
+            <dt>Name (EN)</dt><dd>{{ tender.BuyerNameEn || '—' }}</dd>
+            <dt>Name (DE)</dt><dd>{{ tender.BuyerName || '—' }}</dd>
+            <dt>City</dt><dd>{{ tender.BuyerCity || '—' }}</dd>
+            <dt>Country</dt><dd>{{ tender.BuyerCountry || '—' }}</dd>
+            <dt>Email</dt>
+            <dd>
+              <a *ngIf="tender.BuyerContactEmail" [href]="'mailto:' + tender.BuyerContactEmail">
+                {{ tender.BuyerContactEmail }}
+              </a>
+              <span *ngIf="!tender.BuyerContactEmail">—</span>
+            </dd>
+            <dt>Phone</dt><dd>{{ tender.BuyerContactPhone || '—' }}</dd>
+            <dt>Website</dt>
+            <dd>
+              <a *ngIf="tender.BuyerWebsite" [href]="tender.BuyerWebsite" target="_blank" rel="noopener">
+                {{ tender.BuyerWebsite }}
+              </a>
+              <span *ngIf="!tender.BuyerWebsite">—</span>
+            </dd>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Dates -->
+      <mat-card>
+        <mat-card-header><mat-card-title>📅 Dates</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <dl class="fact-list">
+            <dt>Published</dt><dd>{{ tender.PublicationDate | date:'dd MMM yyyy' }}</dd>
+            <dt>Submission Deadline</dt><dd>{{ (tender.SubmissionDeadline || tender.Deadline) | date:'dd MMM yyyy HH:mm' }}</dd>
+            <dt>Contract Start</dt><dd>{{ tender.ContractStartDate | date:'dd MMM yyyy' }}</dd>
+            <dt>Contract End</dt><dd>{{ tender.ContractEndDate | date:'dd MMM yyyy' }}</dd>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+  </div>
+</div>
+
+<div class="spinner-wrap" *ngIf="loading">
+  <mat-spinner></mat-spinner>
+</div>
+
+<div class="error-wrap" *ngIf="error">
+  <mat-icon color="warn">error</mat-icon>
+  <p>{{ error }}</p>
+  <button mat-stroked-button routerLink="/tenders">Back to list</button>
+</div>
+
