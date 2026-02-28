@@ -37,7 +37,7 @@
   </div>
 
   <!-- Table -->
-  <div class="table-wrap" *ngIf="!loading">
+  <div class="table-wrap" [class.hidden]="loading">
     <table mat-table [dataSource]="tenders" matSort
            [matSortActive]="sortColumn"
            [matSortDirection]="sortAsc ? 'asc' : 'desc'"

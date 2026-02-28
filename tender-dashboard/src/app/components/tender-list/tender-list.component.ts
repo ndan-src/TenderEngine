@@ -1,5 +1,5 @@
 ﻿import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -19,7 +19,7 @@ import { Tender } from '../../models/tender.model';
   selector: 'app-tender-list',
   standalone: true,
   imports: [
-    CommonModule, RouterModule, FormsModule,
+    CommonModule, RouterModule, FormsModule, DatePipe,
     MatTableModule, MatPaginatorModule, MatSortModule,
     MatInputModule, MatFormFieldModule, MatButtonModule,
     MatIconModule, MatChipsModule, MatProgressSpinnerModule, MatTooltipModule
