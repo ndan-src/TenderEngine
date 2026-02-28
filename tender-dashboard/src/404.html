@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tender Dashboard</title>
+  <script>
+    // GitHub Pages 404 redirect for Angular routing
+    // Stores the path and redirects to index.html, which restores it
+    var path = window.location.pathname;
+    var base = '/TenderEngine';
+    var rest = path.startsWith(base) ? path.slice(base.length) : path;
+    sessionStorage.setItem('redirect', rest + window.location.search);
+    window.location.replace(base + '/');
+  </script>
+</head>
+</html>
+

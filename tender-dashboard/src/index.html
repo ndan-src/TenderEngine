@@ -8,6 +8,18 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script>
+    // Restore path saved by 404.html for Angular client-side routing on GitHub Pages
+    (function() {
+      var redirect = sessionStorage.getItem('redirect');
+      if (redirect) {
+        sessionStorage.removeItem('redirect');
+        if (redirect !== '/') {
+          window.history.replaceState(null, null, '/TenderEngine' + redirect);
+        }
+      }
+    })();
+  </script>
 </head>
 <body class="mat-typography">
   <app-root></app-root>
