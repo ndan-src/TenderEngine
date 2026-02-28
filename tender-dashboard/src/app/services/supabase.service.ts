@@ -2,6 +2,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { Tender } from '../models/tender.model';
+import { nutsLabel } from '../data/nuts-codes';
 
 export interface TenderFilter {
   search?: string;
@@ -14,6 +15,16 @@ export interface TenderFilter {
 export interface PagedResult<T> {
   data: T[];
   count: number;
+}
+
+export interface DateRangeFilter {
+  dateFrom: string;
+  dateTo: string;
+}
+
+export interface LabelValue {
+  label: string;
+  value: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -95,6 +106,129 @@ export class SupabaseService {
       avgScore: Math.round(avgScore * 10) / 10,
       totalValue
     };
+  }
+
+  /** Sector spend: total ValueEuro grouped by CpvCode prefix (first 2 digits), sorted desc */
+  async getSectorSpend(range: DateRangeFilter, topN = 10): Promise<LabelValue[]> {
+    const { data, error } = await this.client
+      .from('Tenders')
+      .select('CpvCode, ValueEuro')
+      .gte('PublicationDate', range.dateFrom)
+      .lte('PublicationDate', range.dateTo)
+      .not('CpvCode', 'is', null);
+    if (error) throw error;
+
+    const rows = data as Pick<Tender, 'CpvCode' | 'ValueEuro'>[];
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const key = (r.CpvCode ?? '').substring(0, 2) || 'Unknown';
+      map.set(key, (map.get(key) ?? 0) + (r.ValueEuro ?? 0));
+    }
+    return [...map.entries()]
+      .map(([label, value]) => ({ label: `CPV ${label}`, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, topN);
+  }
+
+  /** Region activity: tender count grouped by NutsCode, sorted desc */
+  async getRegionCounts(range: DateRangeFilter, topN = 10): Promise<LabelValue[]> {
+    const { data, error } = await this.client
+      .from('Tenders')
+      .select('NutsCode, BuyerCity')
+      .gte('PublicationDate', range.dateFrom)
+      .lte('PublicationDate', range.dateTo);
+    if (error) throw error;
+
+    const rows = data as Pick<Tender, 'NutsCode' | 'BuyerCity'>[];
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      // Prefer NUTS label, fall back to BuyerCity, then Unknown
+      const key = r.NutsCode
+        ? nutsLabel(r.NutsCode)
+        : (r.BuyerCity || 'Unknown');
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, topN);
+  }
+
+  /** Average contract value by CPV sector */
+  async getAvgValueByCategory(range: DateRangeFilter, topN = 10): Promise<LabelValue[]> {
+    const { data, error } = await this.client
+      .from('Tenders')
+      .select('CpvCode, ValueEuro')
+      .gte('PublicationDate', range.dateFrom)
+      .lte('PublicationDate', range.dateTo)
+      .not('ValueEuro', 'is', null)
+      .not('CpvCode', 'is', null);
+    if (error) throw error;
+
+    const rows = data as Pick<Tender, 'CpvCode' | 'ValueEuro'>[];
+    const map = new Map<string, { sum: number; count: number }>();
+    for (const r of rows) {
+      const key = (r.CpvCode ?? '').substring(0, 2) || 'Unknown';
+      const existing = map.get(key) ?? { sum: 0, count: 0 };
+      map.set(key, { sum: existing.sum + (r.ValueEuro ?? 0), count: existing.count + 1 });
+    }
+    return [...map.entries()]
+      .map(([label, { sum, count }]) => ({ label: `CPV ${label}`, value: Math.round(sum / count) }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, topN);
+  }
+
+  /** Repeat contracting authorities: buyers with most tenders in the range */
+  async getRepeatBuyers(range: DateRangeFilter, topN = 10): Promise<LabelValue[]> {
+    const { data, error } = await this.client
+      .from('Tenders')
+      .select('BuyerNameEn, BuyerName')
+      .gte('PublicationDate', range.dateFrom)
+      .lte('PublicationDate', range.dateTo);
+    if (error) throw error;
+
+    const rows = data as Pick<Tender, 'BuyerNameEn' | 'BuyerName'>[];
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const key = r.BuyerNameEn || r.BuyerName || 'Unknown';
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .filter(r => r.value > 1) // only repeat buyers
+      .slice(0, topN);
+  }
+
+  /** Spend over time: total ValueEuro grouped by week or month */
+  async getSpendOverTime(range: DateRangeFilter, groupBy: 'week' | 'month' = 'week'): Promise<LabelValue[]> {
+    const { data, error } = await this.client
+      .from('Tenders')
+      .select('PublicationDate, ValueEuro')
+      .gte('PublicationDate', range.dateFrom)
+      .lte('PublicationDate', range.dateTo)
+      .order('PublicationDate', { ascending: true });
+    if (error) throw error;
+
+    const rows = data as Pick<Tender, 'PublicationDate' | 'ValueEuro'>[];
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      if (!r.PublicationDate) continue;
+      const d = new Date(r.PublicationDate);
+      let key: string;
+      if (groupBy === 'month') {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      } else {
+        // ISO week
+        const startOfYear = new Date(d.getFullYear(), 0, 1);
+        const week = Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+        key = `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+      }
+      map.set(key, (map.get(key) ?? 0) + (r.ValueEuro ?? 0));
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([label, value]) => ({ label, value }));
   }
 }
 
