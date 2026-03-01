@@ -31,6 +31,17 @@
     </button>
   </div>
 
+  <!-- Status filter chips -->
+  <div class="status-filter-bar">
+    <span class="status-filter-label">Status:</span>
+    <button *ngFor="let s of allStatuses"
+            class="status-chip"
+            [ngClass]="[statusClass(s), isStatusSelected(s) ? 'selected' : 'unselected']"
+            (click)="toggleStatus(s)">
+      {{ statusLabel(s) }}
+    </button>
+  </div>
+
   <!-- Loading spinner -->
   <div *ngIf="loading" class="spinner-wrap">
     <mat-spinner diameter="40"></mat-spinner>
@@ -44,6 +55,16 @@
            matSortDisableClear
            (matSortChange)="onSortChange($event)"
            class="tender-table">
+
+      <!-- Status -->
+      <ng-container matColumnDef="NoticeStatus">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let t">
+          <span class="status-badge" [ngClass]="statusClass(t.NoticeStatus)">
+            {{ statusLabel(t.NoticeStatus) }}
+          </span>
+        </td>
+      </ng-container>
 
       <!-- Title -->
       <ng-container matColumnDef="TitleEn">

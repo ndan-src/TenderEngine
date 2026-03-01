@@ -44,8 +44,12 @@ export class TenderListComponent implements OnInit, AfterViewInit {
   dateFrom = '';
   dateTo = '';
 
+  // All possible statuses; null represents old rows not yet retro-filled
+  readonly allStatuses = ['Active', 'Amendment', 'Awarded'] as const;
+  selectedStatuses: string[] = ['Active', 'Amendment']; // default: exclude Awarded
+
   displayedColumns = [
-    'TitleEn', 'BuyerNameEn', 'CpvCode', 'ValueEuro',
+    'NoticeStatus', 'TitleEn', 'BuyerNameEn', 'CpvCode', 'ValueEuro',
     'PublicationDate', 'SubmissionDeadline', 'SuitabilityScore', 'actions'
   ];
 
@@ -80,7 +84,10 @@ export class TenderListComponent implements OnInit, AfterViewInit {
     this.filter = {
       search: this.searchText || undefined,
       dateFrom: this.dateFrom || undefined,
-      dateTo: this.dateTo || undefined
+      dateTo: this.dateTo || undefined,
+      noticeStatuses: this.selectedStatuses.length > 0 && this.selectedStatuses.length < this.allStatuses.length
+        ? this.selectedStatuses
+        : undefined   // no filter when all (or none) selected
     };
     this.page = 0;
     this.load();
@@ -90,9 +97,42 @@ export class TenderListComponent implements OnInit, AfterViewInit {
     this.searchText = '';
     this.dateFrom = '';
     this.dateTo = '';
+    this.selectedStatuses = ['Active', 'Amendment'];
     this.filter = {};
     this.page = 0;
     this.load();
+  }
+
+  toggleStatus(status: string) {
+    const idx = this.selectedStatuses.indexOf(status);
+    if (idx >= 0) {
+      this.selectedStatuses.splice(idx, 1);
+    } else {
+      this.selectedStatuses.push(status);
+    }
+    this.applyFilter();
+  }
+
+  isStatusSelected(status: string): boolean {
+    return this.selectedStatuses.includes(status);
+  }
+
+  statusLabel(status?: string | null): string {
+    switch (status) {
+      case 'Active':    return 'Active';
+      case 'Amendment': return 'Amended';
+      case 'Awarded':   return 'Awarded';
+      default:          return 'Unknown';
+    }
+  }
+
+  statusClass(status?: string | null): string {
+    switch (status) {
+      case 'Active':    return 'status-active';
+      case 'Amendment': return 'status-amendment';
+      case 'Awarded':   return 'status-awarded';
+      default:          return 'status-unknown';
+    }
   }
 
   onPageChange(event: PageEvent) {

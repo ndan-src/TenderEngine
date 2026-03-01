@@ -10,6 +10,7 @@ export interface TenderFilter {
   dateTo?: string;
   minScore?: number;
   hasFatalFlaws?: boolean;
+  noticeStatuses?: string[];   // e.g. ['Active', 'Amendment']
 }
 
 export interface PagedResult<T> {
@@ -70,6 +71,9 @@ export class SupabaseService {
     }
     if (filter.hasFatalFlaws === true) {
       query = query.not('FatalFlaws', 'is', null);
+    }
+    if (filter.noticeStatuses && filter.noticeStatuses.length > 0) {
+      query = query.in('NoticeStatus', filter.noticeStatuses);
     }
 
     const { data, error, count } = await query;

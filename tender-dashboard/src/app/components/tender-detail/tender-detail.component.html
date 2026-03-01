@@ -6,7 +6,12 @@
       <mat-icon>arrow_back</mat-icon> Back to list
     </button>
     <div class="header-main">
-      <h1>{{ tender.TitleEn || tender.TitleDe || 'Untitled' }}</h1>
+      <div class="title-row">
+        <h1>{{ tender.TitleEn || tender.TitleDe || 'Untitled' }}</h1>
+        <span class="status-badge" [ngClass]="statusClass(tender.NoticeStatus)">
+          {{ statusLabel(tender.NoticeStatus) }}
+        </span>
+      </div>
       <span *ngIf="tender.TitleEn && tender.TitleDe" class="original-title">
         🇩🇪 {{ tender.TitleDe }}
       </span>
@@ -15,6 +20,15 @@
        [href]="tender.BuyerPortalUrl" target="_blank" rel="noopener">
       <mat-icon>open_in_new</mat-icon> Open Tender Portal
     </a>
+  </div>
+
+  <!-- Amendment notice banner -->
+  <div *ngIf="tender.NoticeStatus === 'Amendment'" class="amendment-banner">
+    <mat-icon>edit_note</mat-icon>
+    <span>
+      <strong>Amended Notice</strong> — This is an update (v{{ tender.NoticeVersion }}) to a previously published tender.
+      The original details may have changed.
+    </span>
   </div>
 
   <div class="detail-grid">
@@ -92,6 +106,13 @@
         <mat-card-header><mat-card-title>📋 Key Facts</mat-card-title></mat-card-header>
         <mat-card-content>
           <dl class="fact-list">
+            <dt>Status</dt>
+            <dd>
+              <span class="status-badge" [ngClass]="statusClass(tender.NoticeStatus)">
+                {{ statusLabel(tender.NoticeStatus) }}
+              </span>
+            </dd>
+            <dt>Notice Version</dt><dd>{{ tender.NoticeVersion || '—' }}</dd>
             <dt>Notice Type</dt><dd>{{ tender.NoticeType || '—' }}</dd>
             <dt>CPV Code</dt><dd><code *ngIf="tender.CpvCode">{{ tender.CpvCode }}</code><span *ngIf="!tender.CpvCode">—</span></dd>
             <dt>Additional CPVs</dt><dd>{{ tender.AdditionalCpvCodes || '—' }}</dd>

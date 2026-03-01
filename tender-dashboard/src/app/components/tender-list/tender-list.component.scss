@@ -90,3 +90,61 @@ code {
   border-radius: 3px;
 }
 
+// ── Status filter bar ──────────────────────────────────────────────────
+.status-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.status-filter-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.status-chip {
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 4px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  outline: none;
+
+  &.unselected {
+    opacity: 0.35;
+    filter: grayscale(60%);
+  }
+  &.selected {
+    opacity: 1;
+    filter: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  }
+  &:hover { transform: translateY(-1px); }
+
+  // colour variants — border matches the badge colour
+  &.status-active    { background: #e8f5e9; color: #1b5e20; border-color: #4caf50; }
+  &.status-amendment { background: #fff8e1; color: #7c4d00; border-color: #f59e0b; }
+  &.status-awarded   { background: #e3f2fd; color: #0d47a1; border-color: #2196f3; }
+  &.status-unknown   { background: #f5f5f5; color: #555;    border-color: #bbb; }
+}
+
+// ── Status badge (in table cells) ─────────────────────────────────────
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.status-active    { background: #e8f5e9; color: #1b5e20; }
+  &.status-amendment { background: #fff8e1; color: #7c4d00; }
+  &.status-awarded   { background: #e3f2fd; color: #0d47a1; }
+  &.status-unknown   { background: #f5f5f5; color: #555; }
+}
+

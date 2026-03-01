@@ -54,5 +54,23 @@ export class TenderDetailComponent implements OnInit {
     if (score >= 4) return 'score-mid';
     return 'score-low';
   }
+
+  statusLabel(status?: string | null): string {
+    switch (status) {
+      case 'Active':    return 'Active';
+      case 'Amendment': return 'Amended Notice';
+      case 'Awarded':   return 'Awarded';
+      default:          return 'Unknown';
+    }
+  }
+
+  statusClass(status?: string | null): string {
+    switch (status) {
+      case 'Active':    return 'status-active';
+      case 'Amendment': return 'status-amendment';
+      case 'Awarded':   return 'status-awarded';
+      default:          return 'status-unknown';
+    }
+  }
 }
 

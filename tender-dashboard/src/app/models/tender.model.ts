@@ -4,7 +4,10 @@
   // Identity
   SourceId: string;
   LotId?: string;
+  NoticeId?: string;
+  NoticeVersion?: string;
   NoticeType?: string;
+  NoticeStatus?: 'Active' | 'Amendment' | 'Awarded' | null;
 
   // Title
   TitleDe?: string;
