@@ -10,6 +10,7 @@ public class TenderDbContext : DbContext
     }
 
     public DbSet<Tender> Tenders { get; set; }
+    public DbSet<UkAwardedTender> UkAwardedTenders { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,8 +22,12 @@ public class TenderDbContext : DbContext
         modelBuilder.Entity<Tender>()
             .HasIndex(t => t.NoticeId);
 
+        // UK awarded tenders — unique per OCID
+        modelBuilder.Entity<UkAwardedTender>()
+            .HasIndex(u => u.Ocid)
+            .IsUnique();
+
         // Ensure every DateTime property is stored as UTC.
-        // This prevents Npgsql's "Kind=Unspecified" error on timestamp with time zone columns.
         var utcConverter = new ValueConverter<DateTime, DateTime>(
             d => d.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(d, DateTimeKind.Utc) : d.ToUniversalTime(),
             d => DateTime.SpecifyKind(d, DateTimeKind.Utc));
@@ -40,5 +45,16 @@ public class TenderDbContext : DbContext
         tender.Property(t => t.Deadline).HasConversion(utcNullableConverter);
         tender.Property(t => t.ContractStartDate).HasConversion(utcNullableConverter);
         tender.Property(t => t.ContractEndDate).HasConversion(utcNullableConverter);
+
+        var uk = modelBuilder.Entity<UkAwardedTender>();
+        uk.Property(u => u.CreatedAt).HasConversion(utcConverter);
+        uk.Property(u => u.ReleaseDate).HasConversion(utcNullableConverter);
+        uk.Property(u => u.TenderDeadline).HasConversion(utcNullableConverter);
+        uk.Property(u => u.TenderContractStart).HasConversion(utcNullableConverter);
+        uk.Property(u => u.TenderContractEnd).HasConversion(utcNullableConverter);
+        uk.Property(u => u.AwardDate).HasConversion(utcNullableConverter);
+        uk.Property(u => u.AwardDatePublished).HasConversion(utcNullableConverter);
+        uk.Property(u => u.AwardContractStart).HasConversion(utcNullableConverter);
+        uk.Property(u => u.AwardContractEnd).HasConversion(utcNullableConverter);
     }
 }

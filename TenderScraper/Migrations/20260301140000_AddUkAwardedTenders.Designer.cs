@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TenderScraper.Infrastructure;
@@ -11,9 +12,11 @@ using TenderScraper.Infrastructure;
 namespace TenderScraper.Migrations
 {
     [DbContext(typeof(TenderDbContext))]
-    partial class TenderDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260301140000_AddUkAwardedTenders")]
+    partial class AddUkAwardedTenders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -24,159 +27,55 @@ namespace TenderScraper.Migrations
 
             modelBuilder.Entity("TenderScraper.Infrastructure.Tender", b =>
                 {
-                    b.Property<int>("TenderID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
+                    b.Property<int>("TenderID").ValueGeneratedOnAdd().HasColumnType("integer");
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TenderID"));
-
-                    b.Property<string>("AdditionalCpvCodes")
-                        .HasColumnType("text");
-
-                    b.Property<string>("BuyerCity")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("BuyerContactEmail")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("BuyerContactPhone")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("BuyerCountry")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<string>("BuyerName")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("BuyerNameEn")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("BuyerPortalUrl")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
-                    b.Property<string>("BuyerWebsite")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("ContractEndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ContractNature")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("ContractStartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CpvCode")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("Deadline")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DescriptionDe")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DescriptionEn")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("EligibilityProbability")
-                        .HasColumnType("numeric(3,2)");
-
-                    b.Property<string>("EnglishExecutiveSummary")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FatalFlaws")
-                        .HasColumnType("text");
-
-                    b.Property<string>("HardCertifications")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LotId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("NoticeId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("NoticeStatus")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("NoticeType")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("NoticeVersion")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<string>("NutsCode")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("ProcedureType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("PublicationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RawXml")
-                        .HasColumnType("text");
-
-                    b.Property<string>("SourceId")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<DateTime?>("SubmissionDeadline")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("SuitabilityScore")
-                        .HasColumnType("numeric(3,1)");
-
-                    b.Property<string>("TechStack")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TitleDe")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TitleEn")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("ValueEuro")
-                        .HasColumnType("numeric(18,2)");
-
+                    b.Property<string>("AdditionalCpvCodes").HasColumnType("text");
+                    b.Property<string>("BuyerCity").HasMaxLength(100).HasColumnType("character varying(100)");
+                    b.Property<string>("BuyerContactEmail").HasMaxLength(255).HasColumnType("character varying(255)");
+                    b.Property<string>("BuyerContactPhone").HasMaxLength(50).HasColumnType("character varying(50)");
+                    b.Property<string>("BuyerCountry").HasMaxLength(10).HasColumnType("character varying(10)");
+                    b.Property<string>("BuyerName").HasMaxLength(500).HasColumnType("character varying(500)");
+                    b.Property<string>("BuyerNameEn").HasMaxLength(500).HasColumnType("character varying(500)");
+                    b.Property<string>("BuyerPortalUrl").HasMaxLength(2048).HasColumnType("character varying(2048)");
+                    b.Property<string>("BuyerWebsite").HasMaxLength(500).HasColumnType("character varying(500)");
+                    b.Property<DateTime?>("ContractEndDate").HasColumnType("timestamp with time zone");
+                    b.Property<string>("ContractNature").HasMaxLength(50).HasColumnType("character varying(50)");
+                    b.Property<DateTime?>("ContractStartDate").HasColumnType("timestamp with time zone");
+                    b.Property<string>("CpvCode").HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("Deadline").HasColumnType("timestamp with time zone");
+                    b.Property<string>("DescriptionDe").HasColumnType("text");
+                    b.Property<string>("DescriptionEn").HasColumnType("text");
+                    b.Property<decimal?>("EligibilityProbability").HasColumnType("numeric(3,2)");
+                    b.Property<string>("EnglishExecutiveSummary").HasColumnType("text");
+                    b.Property<string>("FatalFlaws").HasColumnType("text");
+                    b.Property<string>("HardCertifications").HasColumnType("text");
+                    b.Property<string>("LotId").HasMaxLength(50).HasColumnType("character varying(50)");
+                    b.Property<string>("NoticeId").HasMaxLength(100).HasColumnType("character varying(100)");
+                    b.Property<string>("NoticeStatus").HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<string>("NoticeType").HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<string>("NoticeVersion").HasMaxLength(10).HasColumnType("character varying(10)");
+                    b.Property<string>("NutsCode").HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<string>("ProcedureType").HasMaxLength(50).HasColumnType("character varying(50)");
+                    b.Property<DateTime?>("PublicationDate").HasColumnType("timestamp with time zone");
+                    b.Property<string>("RawXml").HasColumnType("text");
+                    b.Property<string>("SourceId").IsRequired().HasMaxLength(120).HasColumnType("character varying(120)");
+                    b.Property<DateTime?>("SubmissionDeadline").HasColumnType("timestamp with time zone");
+                    b.Property<decimal?>("SuitabilityScore").HasColumnType("numeric(3,1)");
+                    b.Property<string>("TechStack").HasColumnType("text");
+                    b.Property<string>("TitleDe").HasColumnType("text");
+                    b.Property<string>("TitleEn").HasColumnType("text");
+                    b.Property<decimal?>("ValueEuro").HasColumnType("numeric(18,2)");
                     b.HasKey("TenderID");
-
                     b.HasIndex("NoticeId");
-
-                    b.HasIndex("SourceId")
-                        .IsUnique();
-
+                    b.HasIndex("SourceId").IsUnique();
                     b.ToTable("Tenders");
                 });
 
             modelBuilder.Entity("TenderScraper.Infrastructure.UkAwardedTender", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("integer");
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
                     b.Property<string>("Ocid").IsRequired().HasMaxLength(120).HasColumnType("character varying(120)");
                     b.Property<string>("ReleaseId").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
                     b.Property<DateTime?>("ReleaseDate").HasColumnType("timestamp with time zone");
@@ -220,7 +119,6 @@ namespace TenderScraper.Migrations
                     b.Property<string>("NoticeUrl").HasMaxLength(2048).HasColumnType("character varying(2048)");
                     b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
                     b.Property<string>("RawJson").HasColumnType("text");
-
                     b.HasKey("Id");
                     b.HasIndex("Ocid").IsUnique();
                     b.ToTable("UkAwardedTenders");
@@ -229,3 +127,4 @@ namespace TenderScraper.Migrations
         }
     }
 }
+

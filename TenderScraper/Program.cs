@@ -49,6 +49,7 @@ builder.Services.AddScoped<DeepAnalysisService>();
 builder.Services.AddScoped<IngestionOrchestrator>();
 builder.Services.AddScoped<TenderDocumentDownloader>();
 builder.Services.AddScoped<WeeklyBriefService>();
+builder.Services.AddHttpClient<UkAwardedTenderService>();
 
 var host = builder.Build();
 
@@ -98,6 +99,11 @@ else if (args.Length > 0 && args[0] == "retro")
 {
     // Retro-fill NoticeStatus from existing RawXml in the database
     await RunRetroFillNoticeStatusAsync(host);
+}
+else if (args.Length > 0 && args[0] == "ingest-uk")
+{
+    // Ingest UK Contracts Finder awarded tenders (CPV 72*)
+    await RunUkIngestAsync(host, args);
 }
 else
 {
@@ -592,6 +598,58 @@ static async Task RunRetroFillNoticeStatusAsync(IHost host)
     Console.WriteLine($"   Awarded:                {statusCounts["Awarded"]}");
     if (skipped > 0)  Console.WriteLine($"   Skipped (no RawXml):    {skipped}");
     if (errored > 0)  Console.WriteLine($"   Defaulted (parse err):  {errored}");
+    Console.WriteLine();
+}
+
+static async Task RunUkIngestAsync(IHost host, string[] args)
+{
+    // Usage:
+    //   dotnet run -- ingest-uk                    (yesterday, CPV 72*)
+    //   dotnet run -- ingest-uk --date=2026-02-28  (specific date)
+    //   dotnet run -- ingest-uk --all-cpv          (all CPV codes, not just 72*)
+    //   dotnet run -- ingest-uk --cpv=48           (different CPV prefix)
+
+    DateTime targetDate = DateTime.UtcNow.Date.AddDays(-1);
+    var dateArg = args.FirstOrDefault(a => a.StartsWith("--date="));
+    if (dateArg != null && DateTime.TryParse(dateArg.Split('=')[1], out var parsed))
+        targetDate = parsed;
+
+    bool allCpv = args.Contains("--all-cpv");
+    var cpvArg  = args.FirstOrDefault(a => a.StartsWith("--cpv="))?.Split('=')[1] ?? "72";
+
+    Console.WriteLine("╔════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║     TenderEngine - UK Awards Ingestion                ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════╝");
+    Console.WriteLine();
+    Console.WriteLine($"Target Date: {targetDate:yyyy-MM-dd} ({targetDate:dddd})");
+    Console.WriteLine($"CPV Filter:  {(allCpv ? "ALL" : $"{cpvArg}*")}");
+    Console.WriteLine();
+
+    using var scope = host.Services.CreateScope();
+    var service = scope.ServiceProvider.GetRequiredService<UkAwardedTenderService>();
+
+    try
+    {
+        Console.WriteLine("📡 Fetching from Contracts Finder API...");
+        var (fetched, inserted, updated, skipped) =
+            await service.IngestAsync(targetDate, cpvArg, allCpv);
+
+        Console.WriteLine();
+        Console.WriteLine("═══════════════════════════════════════════════════════");
+        Console.WriteLine($"✅  Done.");
+        Console.WriteLine($"   Releases matched:  {fetched}");
+        Console.WriteLine($"   Inserted:          {inserted}");
+        Console.WriteLine($"   Updated:           {updated}");
+        Console.WriteLine($"   Skipped (errors):  {skipped}");
+        Console.WriteLine("═══════════════════════════════════════════════════════");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error: {ex.Message}");
+        if (ex.InnerException != null)
+            Console.WriteLine($"   {ex.InnerException.Message}");
+    }
+
     Console.WriteLine();
 }
 
