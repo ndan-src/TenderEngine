@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TenderScraper.Infrastructure;
@@ -11,9 +12,11 @@ using TenderScraper.Infrastructure;
 namespace TenderScraper.Migrations
 {
     [DbContext(typeof(TenderDbContext))]
-    partial class TenderDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260301095607_AddNoticeStatus")]
+    partial class AddNoticeStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,10 +110,6 @@ namespace TenderScraper.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("NoticeId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("NoticeStatus")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -118,10 +117,6 @@ namespace TenderScraper.Migrations
                     b.Property<string>("NoticeType")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<string>("NoticeVersion")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
 
                     b.Property<string>("NutsCode")
                         .HasMaxLength(20)
@@ -139,8 +134,8 @@ namespace TenderScraper.Migrations
 
                     b.Property<string>("SourceId")
                         .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("SubmissionDeadline")
                         .HasColumnType("timestamp with time zone");
@@ -161,8 +156,6 @@ namespace TenderScraper.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.HasKey("TenderID");
-
-                    b.HasIndex("NoticeId");
 
                     b.HasIndex("SourceId")
                         .IsUnique();

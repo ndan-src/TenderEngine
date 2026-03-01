@@ -17,6 +17,10 @@ public class TenderDbContext : DbContext
             .HasIndex(t => t.SourceId)
             .IsUnique();
 
+        // Non-unique index on NoticeId — allows fast queries for all versions of a tender
+        modelBuilder.Entity<Tender>()
+            .HasIndex(t => t.NoticeId);
+
         // Ensure every DateTime property is stored as UTC.
         // This prevents Npgsql's "Kind=Unspecified" error on timestamp with time zone columns.
         var utcConverter = new ValueConverter<DateTime, DateTime>(

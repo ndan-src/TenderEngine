@@ -9,14 +9,36 @@ public class Tender
     public int TenderID { get; set; }
 
     // ── Identity ─────────────────────────────────────────────────────────
-    [MaxLength(100)]
+    /// <summary>
+    /// Unique key per row: "{OCID}-{LotId}-v{version}" — e.g. "abc123-LOT-0001-v01".
+    /// Each version of a notice (Active, Amendment, Awarded) gets its own row.
+    /// </summary>
+    [MaxLength(120)]
     public string SourceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The bare notice GUID (OCID), shared across all versions of the same notice.
+    /// Use this to group/query all history for a single tender.
+    /// </summary>
+    [MaxLength(100)]
+    public string? NoticeId { get; set; }
+
+    /// <summary>Version string from the XML VersionID element, e.g. "01", "02", "07".</summary>
+    [MaxLength(10)]
+    public string? NoticeVersion { get; set; }
 
     [MaxLength(50)]
     public string? LotId { get; set; }
 
     [MaxLength(20)]
     public string? NoticeType { get; set; }
+
+    /// <summary>
+    /// Active = new open tender; Amendment = correction to existing notice;
+    /// Awarded = contract already awarded (ContractAwardNotice).
+    /// </summary>
+    [MaxLength(20)]
+    public string? NoticeStatus { get; set; }
 
     // ── Title ─────────────────────────────────────────────────────────────
     public string? TitleDe { get; set; }

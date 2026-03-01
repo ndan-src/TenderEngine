@@ -55,8 +55,11 @@ public class WeeklyBriefService
 
                         banner.Item().PaddingTop(20).Row(row =>
                         {
+                            var amendCount = tenders.Count(t => t.NoticeStatus == "Amendment");
                             AddStatPill(row, tenders.Count.ToString(), "Tenders");
                             AddStatPill(row, FormatValue(tenders.Sum(t => t.ValueEuro ?? 0)), "Total Value (Est.)");
+                            if (amendCount > 0)
+                                AddStatPillAmber(row, amendCount.ToString(), "Amendments");
                         });
                     });
 
@@ -74,12 +77,27 @@ public class WeeklyBriefService
                             body.Item().PaddingBottom(14).Border(1).BorderColor("#e2e8f0")
                                 .Column(card =>
                                 {
+                                    // Amendment banner strip — shown only for amended notices
+                                    if (tender.NoticeStatus == "Amendment")
+                                    {
+                                        card.Item()
+                                            .Background(ColourAmber).PaddingHorizontal(12).PaddingVertical(5)
+                                            .Row(ab =>
+                                            {
+                                                ab.ConstantItem(14).Text("✎").FontSize(9).FontColor(Colors.White);
+                                                ab.RelativeItem().PaddingLeft(4)
+                                                    .Text("AMENDED NOTICE — This is an update to a previously published tender")
+                                                    .FontSize(8.5f).Bold().FontColor(Colors.White);
+                                            });
+                                    }
+
                                     // Card header
                                     card.Item().Background(ColourLight).Padding(12).Row(hdr =>
                                     {
-                                        // Rank badge
+                                        // Rank badge — amber for amendments, navy for new
+                                        var badgeColour = tender.NoticeStatus == "Amendment" ? ColourAmber : ColourNavy;
                                         hdr.ConstantItem(32).Height(32)
-                                            .Background(ColourNavy)
+                                            .Background(badgeColour)
                                             .AlignCenter().AlignMiddle()
                                             .Text($"#{rank}").FontSize(11).Bold().FontColor(Colors.White);
 
@@ -235,6 +253,15 @@ public class WeeklyBriefService
         {
             p.Item().Text(value).FontSize(16).Bold().FontColor(Colors.White);
             p.Item().Text(label).FontSize(8).FontColor("#93c5fd");
+        });
+    }
+
+    private static void AddStatPillAmber(RowDescriptor row, string value, string label)
+    {
+        row.ConstantItem(95).PaddingRight(8).Background("#92400e").Padding(10).Column(p =>
+        {
+            p.Item().Text(value).FontSize(16).Bold().FontColor(Colors.White);
+            p.Item().Text(label).FontSize(8).FontColor("#fcd34d");
         });
     }
 

@@ -94,6 +94,11 @@ else if (args.Length > 0 && args[0] == "brief")
 {
     await RunWeeklyBriefAsync(host, args);
 }
+else if (args.Length > 0 && args[0] == "retro")
+{
+    // Retro-fill NoticeStatus from existing RawXml in the database
+    await RunRetroFillNoticeStatusAsync(host);
+}
 else
 {
     // Service Mode: Run as background worker
@@ -236,16 +241,24 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
             // Save to database
             try
             {
-                // Check if tender already exists (avoid duplicates)
-                var existingTender = await dbContext.Tenders
-                    .FirstOrDefaultAsync(t => t.SourceId == $"{tender.OCID}-{tender.LotId}");
-                
-                if (existingTender == null)
-                {                    var dbTender = new Tender
+                // SourceId includes the version so every notice version gets its own row:
+                //   "{OCID}-{LotId}-v{version}"  e.g. "abc123-LOT-0001-v01"
+                var version = tender.NoticeVersion ?? "01";
+                var sourceId = $"{tender.OCID}-{tender.LotId}-v{version}";
+
+                var existingRow = await dbContext.Tenders
+                    .FirstOrDefaultAsync(t => t.SourceId == sourceId);
+
+                if (existingRow == null)
+                {
+                    var dbTender = new Tender
                     {
-                        SourceId = $"{tender.OCID}-{tender.LotId}",
+                        SourceId = sourceId,
+                        NoticeId = tender.OCID,          // bare GUID — shared across all versions
+                        NoticeVersion = version,
                         LotId = tender.LotId,
                         NoticeType = tender.NoticeType,
+                        NoticeStatus = tender.NoticeStatus,
 
                         // Title & description (German original; English filled by AI if run)
                         TitleDe = tender.Title,
@@ -275,7 +288,7 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
                         // Dates
                         PublicationDate = tender.PublicationDate == default ? null : tender.PublicationDate,
                         SubmissionDeadline = tender.SubmissionDeadline,
-                        Deadline = tender.SubmissionDeadline, // backwards-compat alias
+                        Deadline = tender.SubmissionDeadline,
                         ContractStartDate = tender.ContractStartDate,
                         ContractEndDate = tender.ContractEndDate,
 
@@ -296,23 +309,37 @@ static async Task RunCliIngestionAsync(IHost host, string[] args)
                         RawXml = tender.RawXml,
                         CreatedAt = DateTime.UtcNow
                     };
-                    
+
                     dbContext.Tenders.Add(dbTender);
                     await dbContext.SaveChangesAsync();
-                    Console.WriteLine($"    💾 Saved to database (ID: {dbTender.TenderID})");
+                    Console.WriteLine($"    💾 Saved {tender.NoticeStatus} v{version} (ID: {dbTender.TenderID})");
+
+                    // Backfill BuyerNameEn onto all sibling rows (same NoticeId) that are missing it
+                    if (!string.IsNullOrEmpty(buyerNameEn))
+                    {
+                        var siblings = await dbContext.Tenders
+                            .Where(t => t.NoticeId == tender.OCID && string.IsNullOrEmpty(t.BuyerNameEn) && t.TenderID != dbTender.TenderID)
+                            .ToListAsync();
+                        if (siblings.Any())
+                        {
+                            foreach (var s in siblings) s.BuyerNameEn = buyerNameEn;
+                            await dbContext.SaveChangesAsync();
+                            Console.WriteLine($"    🔗 Backfilled BuyerNameEn on {siblings.Count} sibling row(s)");
+                        }
+                    }
                 }
                 else
                 {
-                    // Backfill BuyerNameEn if it was missing on a previous run
-                    if (string.IsNullOrEmpty(existingTender.BuyerNameEn) && !string.IsNullOrEmpty(buyerNameEn))
+                    // Same version already ingested — only update BuyerNameEn if missing
+                    if (string.IsNullOrEmpty(existingRow.BuyerNameEn) && !string.IsNullOrEmpty(buyerNameEn))
                     {
-                        existingTender.BuyerNameEn = buyerNameEn;
+                        existingRow.BuyerNameEn = buyerNameEn;
                         await dbContext.SaveChangesAsync();
-                        Console.WriteLine($"    ℹ️  Updated BuyerNameEn (ID: {existingTender.TenderID})");
+                        Console.WriteLine($"    ℹ️  Updated BuyerNameEn on existing row (ID: {existingRow.TenderID})");
                     }
                     else
                     {
-                        Console.WriteLine($"    ℹ️  Already in database (ID: {existingTender.TenderID})");
+                        Console.WriteLine($"    ℹ️  Already in database — {tender.NoticeStatus} v{version} (ID: {existingRow.TenderID})");
                     }
                 }
             }
@@ -408,7 +435,8 @@ static async Task RunWeeklyBriefAsync(IHost host, string[] args)
         .Where(t =>
             t.CpvCode != null && t.CpvCode.StartsWith(cpvArg) &&
             t.PublicationDate >= weekStartDt &&
-            t.PublicationDate <= weekEndDt)
+            t.PublicationDate <= weekEndDt &&
+            (t.NoticeStatus == "Active" || t.NoticeStatus == "Amendment" || t.NoticeStatus == null))
         .OrderByDescending(t => t.SuitabilityScore ?? 0)
         .ThenByDescending(t => t.ValueEuro ?? 0)
         .Take(topN)
@@ -420,7 +448,8 @@ static async Task RunWeeklyBriefAsync(IHost host, string[] args)
         Console.WriteLine($"⚠️  No tenders found for that week. Widening to last 30 days...");
         var cutoff = DateTime.UtcNow.AddDays(-30);
         tenders = await dbContext.Tenders
-            .Where(t => t.CpvCode != null && t.CpvCode.StartsWith(cpvArg) && t.PublicationDate >= cutoff)
+            .Where(t => t.CpvCode != null && t.CpvCode.StartsWith(cpvArg) && t.PublicationDate >= cutoff &&
+                        (t.NoticeStatus == "Active" || t.NoticeStatus == "Amendment" || t.NoticeStatus == null))
             .OrderByDescending(t => t.SuitabilityScore ?? 0)
             .ThenByDescending(t => t.ValueEuro ?? 0)
             .Take(topN)
@@ -469,5 +498,100 @@ static async Task RunWeeklyBriefAsync(IHost host, string[] args)
         if (ex.InnerException != null)
             Console.WriteLine($"   {ex.InnerException.Message}");
     }
+}
+
+static async Task RunRetroFillNoticeStatusAsync(IHost host)
+{
+    Console.WriteLine("╔════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║   TenderEngine - Retro-fill NoticeStatus from RawXml  ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════╝");
+    Console.WriteLine();
+
+    using var scope = host.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<TenderDbContext>();
+
+    // Load all rows that have RawXml — we'll refresh status, NoticeId, NoticeVersion and SourceId format
+    var allRows = await dbContext.Tenders
+        .Where(t => t.RawXml != null)
+        .ToListAsync();
+
+    Console.WriteLine($"Found {allRows.Count} row(s) with RawXml to process.");
+
+    if (allRows.Count == 0)
+    {
+        Console.WriteLine("✅ Nothing to do.");
+        return;
+    }
+
+    int updatedStatus = 0, updatedMeta = 0, skipped = 0, errored = 0;
+    var statusCounts = new Dictionary<string, int> { ["Active"] = 0, ["Amendment"] = 0, ["Awarded"] = 0 };
+
+    foreach (var row in allRows)
+    {
+        if (string.IsNullOrEmpty(row.RawXml))
+        {
+            skipped++;
+            continue;
+        }
+
+        try
+        {
+            // ── 1. Derive NoticeStatus ────────────────────────────────
+            var status = GermanEformsProvider.DetermineNoticeStatusFromXml(row.RawXml);
+            if (row.NoticeStatus != status)
+            {
+                row.NoticeStatus = status;
+                updatedStatus++;
+            }
+            statusCounts[status] = statusCounts.GetValueOrDefault(status) + 1;
+
+            // ── 2. Backfill NoticeVersion from XML VersionID ──────────
+            if (string.IsNullOrEmpty(row.NoticeVersion))
+            {
+                var version = GermanEformsProvider.ExtractVersionFromXml(row.RawXml);
+                row.NoticeVersion = version;
+                updatedMeta++;
+            }
+
+            // ── 3. Backfill NoticeId (bare GUID = everything before the last '-vXX') ─
+            if (string.IsNullOrEmpty(row.NoticeId))
+            {
+                // Try to derive NoticeId from existing SourceId.
+                // Old format: "{OCID}-{LotId}"  e.g. "abc123-LOT-0001"
+                // New format: "{OCID}-{LotId}-v{version}"
+                // OCID is the notice GUID — extract from RawXml for accuracy.
+                row.NoticeId = GermanEformsProvider.ExtractNoticeIdFromXml(row.RawXml);
+                updatedMeta++;
+            }
+
+            // ── 4. Migrate SourceId to versioned format if not already ─
+            // Old: "abc123-LOT-0001"   New: "abc123-LOT-0001-v01"
+            if (!row.SourceId.Contains("-v") && !string.IsNullOrEmpty(row.NoticeId) && !string.IsNullOrEmpty(row.LotId))
+            {
+                var newSourceId = $"{row.NoticeId}-{row.LotId}-v{row.NoticeVersion ?? "01"}";
+                row.SourceId = newSourceId;
+                updatedMeta++;
+            }
+        }
+        catch
+        {
+            row.NoticeStatus ??= "Active";
+            errored++;
+        }
+    }
+
+    await dbContext.SaveChangesAsync();
+
+    Console.WriteLine();
+    Console.WriteLine($"✅ Done.");
+    Console.WriteLine($"   Rows processed:         {allRows.Count}");
+    Console.WriteLine($"   NoticeStatus updated:   {updatedStatus}");
+    Console.WriteLine($"   Metadata backfilled:    {updatedMeta}");
+    Console.WriteLine($"   Active:                 {statusCounts["Active"]}");
+    Console.WriteLine($"   Amendment:              {statusCounts["Amendment"]}");
+    Console.WriteLine($"   Awarded:                {statusCounts["Awarded"]}");
+    if (skipped > 0)  Console.WriteLine($"   Skipped (no RawXml):    {skipped}");
+    if (errored > 0)  Console.WriteLine($"   Defaulted (parse err):  {errored}");
+    Console.WriteLine();
 }
 

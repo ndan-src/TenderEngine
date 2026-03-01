@@ -109,6 +109,7 @@ public class GermanEformsProvider : ITenderProvider
 
             // ── Notice metadata ──────────────────────────────────────────
             var noticeType = root.Element(cbcNs + "NoticeTypeCode")?.Value;
+            var noticeVersion = root.Element(cbcNs + "VersionID")?.Value?.Trim() ?? "01";
 
             var issueDateStr = root.Element(cbcNs + "IssueDate")?.Value;
             var issueDate = ParseUtc(issueDateStr) ?? DateTime.UtcNow;
@@ -264,6 +265,7 @@ public class GermanEformsProvider : ITenderProvider
                 OCID = noticeId,
                 LotId = lotId,
                 NoticeType = noticeType,
+                NoticeVersion = noticeVersion,
                 Title = title,
                 Description = description,
                 BuyerName = buyerName,
@@ -283,6 +285,7 @@ public class GermanEformsProvider : ITenderProvider
                 ContractStartDate = contractStart,
                 ContractEndDate = contractEnd,
                 BuyerPortalUrl = portalUrl,
+                NoticeStatus = DetermineNoticeStatus(root, cbcNs, efbcNs),
                 RawXml = xmlDoc.ToString()
             };
         }
@@ -310,6 +313,80 @@ public class GermanEformsProvider : ITenderProvider
                 System.Globalization.DateTimeStyles.AdjustToUniversal, out var dt))
             return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         return null;
+    }
+
+    /// <summary>
+    /// Determines the notice status from the root XML element and its contents.
+    /// Rules:
+    ///   Awarded  — root local name is "ContractAwardNotice"
+    ///   Amendment — root is ContractNotice AND contains a ChangedNoticeIdentifier element
+    ///   Active   — root is ContractNotice with no ChangedNoticeIdentifier (new open tender)
+    /// </summary>
+    private static string DetermineNoticeStatus(XElement root, XNamespace cbcNs, XNamespace efbcNs)
+    {
+        var localName = root.Name.LocalName;
+
+        if (localName == "ContractAwardNotice")
+            return "Awarded";
+
+        // Check for ChangedNoticeIdentifier — present in corrigenda/amendments
+        bool hasChangedId = root.Descendants(efbcNs + "ChangedNoticeIdentifier").Any()
+                         || root.Descendants(cbcNs + "ChangedNoticeIdentifier").Any()
+                         || root.Descendants("ChangedNoticeIdentifier").Any(); // legacy no-ns variant
+
+        return hasChangedId ? "Amendment" : "Active";
+    }
+
+    /// <summary>
+    /// Re-derives NoticeStatus from a raw XML string already stored in the database.
+    /// Used for the retro-fill command.
+    /// </summary>
+    public static string DetermineNoticeStatusFromXml(string rawXml)
+    {
+        try
+        {
+            var doc = XDocument.Parse(rawXml);
+            if (doc.Root == null) return "Active";
+
+            var root = doc.Root;
+            var cbcNs = root.GetNamespaceOfPrefix("cbc") ?? CbcNs;
+            var efbcNs = root.GetNamespaceOfPrefix("efbc") ?? EfbcNs;
+
+            return DetermineNoticeStatus(root, cbcNs, efbcNs);
+        }
+        catch
+        {
+            return "Active"; // safe default if XML can't be parsed
+        }
+    }
+
+    /// <summary>Extracts the VersionID string from stored RawXml (e.g. "01", "02").</summary>
+    public static string ExtractVersionFromXml(string rawXml)
+    {
+        try
+        {
+            var doc = XDocument.Parse(rawXml);
+            if (doc.Root == null) return "01";
+            var cbcNs = doc.Root.GetNamespaceOfPrefix("cbc") ?? CbcNs;
+            return doc.Root.Element(cbcNs + "VersionID")?.Value?.Trim() ?? "01";
+        }
+        catch { return "01"; }
+    }
+
+    /// <summary>Extracts the bare notice GUID (NoticeId) from stored RawXml.</summary>
+    public static string? ExtractNoticeIdFromXml(string rawXml)
+    {
+        try
+        {
+            var doc = XDocument.Parse(rawXml);
+            if (doc.Root == null) return null;
+            var cbcNs = doc.Root.GetNamespaceOfPrefix("cbc") ?? CbcNs;
+            // Prefer the element with schemeName="notice-id", fall back to bare <ID>
+            return doc.Root.Descendants(cbcNs + "ID")
+                           .FirstOrDefault(e => e.Attribute("schemeName")?.Value == "notice-id")?.Value
+                   ?? doc.Root.Element(cbcNs + "ID")?.Value;
+        }
+        catch { return null; }
     }
 }
 

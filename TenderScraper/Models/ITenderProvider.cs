@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+﻿
 
 namespace TenderScraper.Models;
 
@@ -46,6 +46,12 @@ public class RawTender
     public string? ProcedureType { get; set; }
     /// <summary>Notice type code: cn-standard / pin-only etc. (BT-02)</summary>
     public string? NoticeType { get; set; }
+
+    /// <summary>Active | Amendment | Awarded — derived from root element and ChangedNoticeIdentifier presence</summary>
+    public string? NoticeStatus { get; set; }
+
+    /// <summary>Version string from XML VersionID, e.g. "01", "02"</summary>
+    public string? NoticeVersion { get; set; }
 
     // ── Financials ────────────────────────────────────────────────────────
     /// <summary>Estimated total contract value in EUR (BT-27)</summary>
